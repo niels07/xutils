@@ -1,0 +1,180 @@
+#/bin/sh
+
+# Some colors for output.
+C_RED="\033[0;31m"
+C_BLUE="\033[0;34m"
+C_YEL="\033[0;33m"
+C_GREEN="\033[1;32m"
+C_CYAN="\033[0;36m"
+C_RESET="\033[0m"
+
+create_aliases=0
+xutils="xls xpwd xdf"
+err=""
+xpath=~/.xutils
+alias_file=$xpath/aliases
+
+ok()
+{
+    echo "${C_GREEN}ok$C_YEL"
+}
+
+fail()
+{
+    echo "${C_RED}failed$C_YEL"
+}
+
+clear
+
+echo "${C_CYAN}__   ___    _ _______ _____ _       _____ "
+echo "\ \ / / |  | |__   __|_   _| |     / ____|"
+echo " \ V /| |  | |  | |    | | | |    | (___  "
+echo "  > < | |  | |  | |    | | | |     \___ \ "
+echo " / . \| |__| |  | |   _| |_| |____ ____) |"
+echo "/_/ \_\\____/   |_|  |_____|______|_____/ "
+echo "$C_YEL"
+
+echo "Installing xutils ... "
+echo -n "Would you like to add aliases(i.e. ls for xls)? $C_BLUE(N/y)$C_YEL "
+read line
+
+if [ "$line" = "y" ]
+then
+    create_aliases=1
+fi
+
+install_util()
+{
+    x=$1
+    echo -n "Checking if '$x' is present ... "
+    if [ -f $x ]
+    then 
+        ok
+    else
+        fail
+        return 1
+    fi
+
+    echo -n "Installing '$x' ... "
+    if cmd "cp $x $xpath"
+    then
+        ok
+    else
+        fail
+        echo "Failed to install '$x': $err"
+        return 1
+    fi
+
+    return 0
+}
+
+cmd()
+{
+    err=`$1 2>&1`
+    return $?
+}
+
+create_alias()
+{
+    local a=$xpath/$2
+    echo -n "Creating alias for $2 ... "
+
+    echo "alias $1='$a'" >> $alias_file
+    cmd "alias $1='$a'" && ok || fail
+}
+
+echo -n "Creating installation directory ... "
+if [ -d $xpath ] || cmd "mkdir $xpath"
+then
+    ok
+else
+    fail
+    echo "Couldn't create $xpath: $err"
+    exit 1
+fi
+
+echo "$C_BLUE"
+echo "INSTALLING COMMANDS $C_YEL"
+for x in $xutils
+do
+    install_util $x
+done
+
+if [ $create_aliases -eq 0 ]
+then
+    echo "Installation finished$C_RESET"
+    exit 0
+fi
+
+echo "#\n# xutils aliases\n#" > $alias_file
+
+echo "$C_BLUE"
+echo "CREATING ALIASES $C_YEL"
+
+for x in $xutils
+do
+    a=`echo $x | cut -f2 -d x`
+    c=`alias | grep "$x="`
+    if [ -z $c ]
+    then
+        create_alias $a $x
+        continue
+    fi
+    echo "There seems to be an alias for '$x' already"
+    echo "Do you still want to create a new alias for '$x'?$C_RED[y/N]$C_YEL "
+    read line
+    if [ "$line" = "y" ]
+    then
+        create_alias $a $x
+    else
+        echo "Skipped alias for '$x'"
+    fi
+done
+
+echo -n "Adding aliases to shell rc ... "
+rc=""
+
+case $SHELL in
+    *bash)
+        rc=.bashrc
+        ;;
+
+    *zsh)
+        rc=.zshrc
+        ;;
+
+    *csh)
+        rc=.cshrc
+        ;;
+
+     *sh)
+        rc=.shrc
+        ;;
+
+    *)
+        ;;
+esac
+
+if [ -z $rc ]
+then
+    fail 
+    echo
+    echo "Failed to find your shell"
+    echo "run: echo '. $alias_file' >> .[YOURSHELL]rc to add the aliases manually."
+else
+    if [ ! -f ~/$rc ]
+    then
+        fail
+        echo
+        echo "Failed to find your shell rc file"
+        echo "run: echo '. $alias_file' >> .[YOURSHELL]rc to add the aliases manually."
+    else
+        echo ". $alias_file" >> ~/$rc
+        ok
+        echo
+        echo "Installation finished"
+        echo "${C_RED}NOTE:$C_YEL For aliases to become active run $C_BLUE'. $alias_file'$C_YEL or restart your terminal$C_RESET"
+    fi
+fi
+
+exit 0
