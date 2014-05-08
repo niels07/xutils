@@ -13,13 +13,13 @@
 
 #define PROGRAM_NAME "df"
 #define VERSION 1.0
+#define AUTHOR "niels@n-ve.be"
 
 #include "xlib.h"
 
 typedef unsigned long long int Bytes;
 
-struct size
-{
+typedef struct {
     /* Bytes / 1024. */
     Bytes in_kbytes;
 
@@ -34,12 +34,9 @@ struct size
 
     /* string length of human_readable. */
     size_t hr_length;
-};
+} Size;
 
-typedef struct size Size;
-
-struct mtab_entry
-{
+typedef struct {
     /* Device filesystem name (i.e. /dev/sda1) */
     char *devfs;
 
@@ -58,9 +55,7 @@ struct mtab_entry
     int use;
 
     Size *free;
-};
-
-typedef struct mtab_entry Mtab_entry;
+} Mtab_entry;
 
 /* Entries red from '/etc/mtab' */
 static Mtab_entry **entries;
@@ -89,23 +84,20 @@ static void free_mtab_entry(Mtab_entry *);
 static Mtab_entry *get_mtab_entry(FILE *);
 static int bytes_count_digits(Bytes );
 
-static Flag flags[] =
-{
+static Flag flags[] = {
     { "human-readable", 'h', &f_human_readable , NULL     },
     { "no-color",       'C', &f_no_color,        NULL     },
     { "help",           ' ', NULL,               usage    },
-    { "version",        ' ', NULL,               xversion },
     { NULL, 0, NULL, NULL }
 };
 
 /* Colors associated with each filetype. */
-const static struct color_assoc
-{
+const static struct color_assoc {
     char *fs;
     Color color;
 } 
-COLOR_ASSOC[] = 
-{
+
+COLOR_ASSOC[] = {
     { "ext4",  C_BLUE  },
     { "nfs",   C_BROWN }, 
     { "tmpfs", C_GREEN },
@@ -126,10 +118,8 @@ human_readable(long double size)
     char *unit;
     char *hr;
     
-    while (size > 1024) 
-    {
+    while (size > 1024) {
         size /= 1024;
-
         i++;
     }
 
@@ -142,7 +132,6 @@ human_readable(long double size)
 
     sprintf(hr, "%.1Lf %s", size, unit);
     free(unit);
-
     return hr;
 }
 
@@ -166,9 +155,7 @@ bytes_to_str(Bytes b)
     char *str;
 
     str = xmalloc(255);
-
     sprintf(str, "%lld", b);
-
     return str;
 }
 
@@ -177,8 +164,7 @@ bytes_count_digits(Bytes b)
 {
     int digits = 0;
 
-    while (b > 0) 
-    {
+    while (b > 0) {
         b /= 10;
         digits++;
     }
@@ -190,11 +176,10 @@ bytes_count_digits(Bytes b)
 static void
 free_mtab_entry(Mtab_entry *entry)
 {
-    xfree(entry->devfs);
-    xfree(entry->mountpoint);
-    xfree(entry->type);
-    
-    xfree(entry);
+    free(entry->devfs);
+    free(entry->mountpoint);
+    free(entry->type);
+    free(entry);
 }
 
 static int 
@@ -203,8 +188,7 @@ ignore_fs(const char *fs)
     if (f_show_all)
         return 0;
 
-    for (size_t i = 0; SPECIAL_FS[i] != NULL; ++i)
-    {
+    for (size_t i = 0; SPECIAL_FS[i] != NULL; ++i) {
         if (streq(SPECIAL_FS[i], fs))
             return 1;
     }

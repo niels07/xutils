@@ -13,9 +13,14 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 
+#define PROGRAM_NAME "ls"
+#define VERSION "1.1"
+#define AUTHOR "niels@n-ve.be"
+#define DESCRIPTION ""
+
 #include "xlib.h"
-enum
-{
+
+enum {
     DT_UNKNOWN = 0,
     DT_FIFO = 1,
     DT_CHR = 2,
@@ -27,11 +32,7 @@ enum
     DT_WHT = 14
 };
 
-
-#define PROGRAM_NAME "ls"
-
-enum filetype
-{
+typedef enum {
     /* Block device. */
     FT_BLOCK,
 
@@ -60,9 +61,7 @@ enum filetype
 
     /* Unkown, for when we can't determine the filetype. */
     FT_UNKOWN
-};
-
-typedef enum filetype Filetype;
+} Filetype;
 
 struct file_data
 {
@@ -145,8 +144,7 @@ static Dir_data **dirs = NULL;
 static size_t num_dirs = 0;
 
 /* Filetypes to ignore if specified. */
-enum 
-{
+enum {
     /* Hide hidden files. All files starting with 
        '.' (set by default). */
     I_HIDDEN = 0x01,
@@ -173,13 +171,6 @@ static Option f_recursive = 0;
 
 /* Width of the window we're working in. */
 static size_t window_width = 0;
-
-static void usage(void);
-static char **get_mode_string(struct stat);
-static void set_almost_all(void);
-static void set_all(void);
-static void set_no_directories(void);
-static void set_no_files(void);
 
 /* Show "hidden" files starting with '.'. */
 static Option f_show_hidden = 0;
@@ -208,23 +199,11 @@ static Option f_human_readable = 0;
 
 static Option f_no_classify = 0;
 
-static Flag flags[] = 
+static void
+version(void)
 {
-    { "all",            'a', &f_show_hidden    , set_all            },
-    { "almost-al",      'A', NULL,               set_almost_all     },
-    { "directory",      'd', NULL,               set_no_files       },
-    { "no-directories", 'D', NULL,               set_no_directories },
-    { "no_classify",    'F', &f_no_classify,     NULL  },
-    { NULL,             'l', &f_long_format    , NULL  },
-    { "no-color",       'C', &f_no_color       , NULL  },
-    { "num-perms",      'N', &f_numeric_perms  , NULL  },
-    { "recursive",      'R', &f_recursive      , NULL  },
-    { "numeric-uid-gid",'n', &f_print_owner_id , NULL  }, 
-    { "human-readable", 'h', &f_human_readable , NULL  },
-    { "help",           ' ', NULL,               usage },
-    { NULL, 0, NULL, NULL }
-};
-
+    xversion(PROGRAM_NAME, VERSION, AUTHOR, DESCRIPTION);
+}
 
 static void 
 usage(void)
@@ -301,6 +280,23 @@ set_no_files(void)
 {
     ignore_files |= I_REG;
 }
+
+static Flag flags[] = {
+    { "all",            'a', &f_show_hidden    , set_all            },
+    { "almost-al",      'A', NULL,               set_almost_all     },
+    { "directory",      'd', NULL,               set_no_files       },
+    { "no-directories", 'D', NULL,               set_no_directories },
+    { "no_classify",    'F', &f_no_classify,     NULL     },
+    { NULL,             'l', &f_long_format    , NULL     },
+    { "no-color",       'C', &f_no_color       , NULL     },
+    { "num-perms",      'N', &f_numeric_perms  , NULL     },
+    { "recursive",      'R', &f_recursive      , NULL     },
+    { "numeric-uid-gid",'n', &f_print_owner_id , NULL     }, 
+    { "human-readable", 'h', &f_human_readable , NULL     },
+    { "version",        ' ', NULL,               version  },
+    { "help",           ' ', NULL,               usage    },
+    { NULL, 0, NULL, NULL }
+};
 
 static char **
 get_mode_string(struct stat st)
@@ -769,12 +765,9 @@ print_files(Dir_data *dir)
         dir->columns = NULL;
 
     if (f_human_readable)
-    {
         dir->lfsize = 7; 
-    }
 
-    if (!f_no_color)
-    {
+    if (!f_no_color) {
         dir->luser += 11;
         dir->lgroup += 11;
         dir->lnlink += 11; 
@@ -799,10 +792,8 @@ free_dirs(void)
     size_t i, j;
     File_data *file;
 
-    for (i = num_dirs; i--;)
-    {
-        for (j = dirs[i]->num_files; j--;)
-        {
+    for (i = num_dirs; i--;) {
+        for (j = dirs[i]->num_files; j--;) {
             file = dirs[i]->files[j];
             free(file->name);
             free(file->user);
@@ -811,11 +802,10 @@ free_dirs(void)
             free(file);
         }
         free(dirs[i]->files);
-       
         for (j = dirs[i]->num_cols; j--;)
             free(dirs[i]->columns[j]);
+        
         free(dirs[i]->columns);
-
         free(dirs[i]->path);
         free(dirs[i]->max_per_col);
         free(dirs[i]);
@@ -842,13 +832,11 @@ get_user_name(struct stat st)
     if (f_print_owner_id)
         return num_to_str(uid);
 
-	if ((xpwd = get_passwd(uid)) == NULL)
-    {
+	if ((xpwd = get_passwd(uid)) == NULL) {
         name = xmalloc(10);
 		sprintf(name, "%d", uid);
 	}
-	else
-    {
+	else {
 		name = dupstr(xpwd->name);
         free_passwd(xpwd);
     }
@@ -866,13 +854,11 @@ get_group_name(struct stat st)
     if (f_print_owner_id)
         return num_to_str(gid);
 
-	if ((group = get_group(gid) ) == NULL )
-    {
+	if ((group = get_group(gid)) == NULL) {
         name = xmalloc(10);
 		sprintf(name, "%d", gid);
 	}
-	else
-    {
+	else {
 		name = dupstr(group->name);
         free_group(group);
     }
@@ -882,8 +868,7 @@ get_group_name(struct stat st)
 static Filetype
 get_filetype(unsigned char t)
 {
-    switch (t)
-    {
+    switch (t) {
     case DT_BLK:
         return FT_BLOCK;
     case DT_CHR: 
@@ -903,8 +888,6 @@ get_filetype(unsigned char t)
     default:
         break;
     }
-
-
     return FT_UNKOWN;
 }
 
@@ -935,15 +918,11 @@ is_dir(const char *f)
     DIR *dir;
 
     dir = opendir(f);
-
-    if (dir == NULL)
-    {
+    if (dir == NULL) {
         errno = 0;
         return 0;
     }
-
     closedir(dir);
-
     return 1;
 }
 
@@ -953,7 +932,6 @@ ignore_file(const char *f)
     int isdir;
 
     isdir = is_dir(f);
-
     return (
         (ignore_files & I_HIDDEN 
             && f[0] == '.') ||
@@ -978,8 +956,7 @@ get_files(const char *path)
     struct winsize w;
     Dir_data *dir;
 
-    if ((d = opendir(path)) == NULL) 
-    {
+    if ((d = opendir(path)) == NULL) {
         xerror("Failed to read '%s'", path);
         return 0;
     }
@@ -988,15 +965,11 @@ get_files(const char *path)
     dir->files = xmalloc(ALLOC * sizeof(File_data *));
 
     path_len = strlen(path);
-
     ioctl(0, TIOCGWINSZ, &w);
-
     window_width = w.ws_col;
 
-    for (i = 0, j = 1; (de = readdir(d)) != NULL; ++i) 
-    {
-        if (ignore_file(de->d_name))
-        {
+    for (i = 0, j = 1; (de = readdir(d)) != NULL; ++i) {
+        if (ignore_file(de->d_name)) {
             --i;
             continue;
         }
@@ -1004,21 +977,20 @@ get_files(const char *path)
         fpath = xmalloc(path_len + strlen(de->d_name) + 2);
         sprintf(fpath, "%s/%s", path, de->d_name);
         
-        if (stat(fpath, &st) == -1)
-        {
+        if (stat(fpath, &st) == -1) {
             free(fpath);
-            xerror("Failed to stat '%s'", de->d_name);
+            xerror("failed to stat '%s'", de->d_name);
             return NULL;
         }
         
         dir->files[i] = xmalloc(sizeof(File_data));
-        
         dir->files[i]->name = dupstr(de->d_name);
-
         dir->files[i]->type = get_filetype(de->d_type);
         if (access(dir->files[i]->name, F_OK|X_OK) == 0 
         &&  dir->files[i]->type != FT_DIR)
             dir->files[i]->type = FT_EXEC;
+        else
+            errno = 0; /* Permission denied. */
 
         dir->files[i]->indicator = get_indicator(dir->files[i]->type);
         dir->files[i]->nlen = strlen(de->d_name);
@@ -1033,49 +1005,40 @@ get_files(const char *path)
             dir->files[i]->nlen++;
 
         row_len += dir->files[i]->nlen + 1;
-
         store_longest(dir, dir->files[i]);
 
-        if (j * ALLOC >= i)
-        {
+        if (j * ALLOC >= i) {
             ++j;
             dir->files = xrealloc(dir->files, (ALLOC * j) * sizeof(File_data *));
         }
 
         if (dir->files[i]->type == FT_DIR && f_recursive)
-        {
             get_files(fpath);
-        }
 
         free(fpath);
     }
 
     if (errno != 0)
-        xerror("An error occured while reading %s", path);
+        xerror("an error occured while reading '%s'", path);
 
     closedir(d);
-
     dir->path = dupstr(path);
     dir->files[i + 1] = NULL;
     dir->num_rows = i / (window_width / (dir->lname + 1)) + 1;
-
     qsort(dir->files, i, sizeof(File_data *), sort_by_name);
-
     dir->num_files = i;
-
     ++num_dirs;
-
     if (dirs == NULL)
         dirs = xmalloc(sizeof(Dir_data *));
     else 
         dirs = xrealloc(dirs, sizeof(Dir_data *) * (num_dirs));
-
     dirs[num_dirs - 1] = dir;
 
     return dir;
 }
 
-int ls(char **args)
+int 
+ls(char **args)
 {
     size_t i;
     int status = EXIT_SUCCESS;
@@ -1085,20 +1048,17 @@ int ls(char **args)
 
     args = get_options(args, flags);
 
-    if (*args == NULL)
-    {
+    if (*args == NULL) {
         args[0] = dupstr(".");
         args[1] = NULL;
     }
 
-    for (i = 0; args[i] != NULL; ++i)
-    {
+    for (i = 0; args[i] != NULL; ++i) {
         if (!get_files(args[i]))
             status = 2;
     }
 
-    for (i = num_dirs; i--;)
-    {
+    for (i = num_dirs; i--;) {
         if (num_dirs > 1)
             fprintf(stdout, "%s: \n", dirs[i]->path);
         print_files(dirs[i]);
@@ -1111,7 +1071,8 @@ int ls(char **args)
     return status;
 }
 
-int main(int argc, char *argv[])
+int 
+main(int argc, char *argv[])
 {
     return ls(argv);
 }

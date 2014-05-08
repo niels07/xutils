@@ -14,10 +14,9 @@ static const char *COLOR_RESET  = "\033[0m";
 void *
 xmalloc(size_t size)
 {
-    void *ptr = malloc (size);
+    void *ptr = malloc(size);
 
-    if (ptr == NULL)    
-    {
+    if (ptr == NULL) {
         fprintf(stderr, "fatal: memory exhausted (malloc of %u bytes).\n", size);
         exit(EXIT_FAILURE);
     }
@@ -28,12 +27,15 @@ xmalloc(size_t size)
 void *
 xrealloc(void *p, size_t size)
 {
-    void *ptr = realloc(p, size);
+    void *ptr;
+    
+    if (p == NULL)
+       return malloc(size);
+        
+    ptr = realloc(p, size);
 
-    if (ptr == NULL)    
-    {
+    if (ptr == NULL) {
         free(p);
-
         fprintf(stderr, "fatal: memory exhausted (malloc of %u bytes).\n", size);
         exit(EXIT_FAILURE);
     }
@@ -51,21 +53,23 @@ xfree(void *p)
 }
 
 void 
-xversion(void)
+xversion(const char *program_name, const char *version, const char *copyright, const char *description)
 {
-#ifdef PROGRAM_NAME
-    fprintf(stdout, PROGRAM_NAME);
-#endif
-#ifdef VERSION
-    fprintf(stdout, "%d", VERSION);
-#endif
-#ifdef COPYRIGHT
-    fprintf(stdout, "\n" COPYRIGHT "\n");
-#endif
-#ifdef DESCRIPTION
-    fprintf(stdout, "\n" DESCRIPTION);
-#endif
-    fputc('\n', stdout);
+    if (program_name != NULL)
+        fprintf(stdout, "%s ", program_name);
+
+    if (version != NULL)
+        fprintf(stdout, "%s\n", version);
+    else
+        fputc('\n', stdout);
+
+    if (copyright != NULL)
+        fprintf(stdout, "%s\n", copyright);
+
+    if (description != NULL)
+        fprintf(stdout, "%s\n", description);
+    
+    exit(EXIT_SUCCESS);
 }
 
 char *
@@ -75,12 +79,9 @@ dupstr(const char *str)
     size_t len;
 
     len = strlen(str);
-    
     dup = xmalloc(len + 1);
-    
     strncpy(dup, str, len);
     dup[len] = '\0';
-    
     return dup;
 }
 
@@ -106,7 +107,6 @@ xerror(const char *format, ...)
 #endif
 
     errno = 0;
-    
     va_end(vl);
 }
 
@@ -146,11 +146,8 @@ color_string(const Color color, const Color_type type, const char *string)
     char color_code[25];
 
     sprintf(color_code, COLOR_FORMAT, type, color);
-
     color_str = xmalloc(strlen(string) + strlen(color_code) + strlen(COLOR_RESET) + 1);
-
     sprintf(color_str, "%s%s%s", color_code, string, COLOR_RESET);
-
     return color_str;
 }
 
@@ -161,11 +158,8 @@ color_num(const Color color, const Color_type type, const int num)
     char color_code[25];
 
     sprintf(color_code, COLOR_FORMAT, type, color);
-
     color_str = xmalloc(strlen(color_code) + strlen(COLOR_RESET) + 10);
-
     sprintf(color_str, "%s%d%s", color_code, num, COLOR_RESET);
-
     return color_str;
 }
 
@@ -176,11 +170,8 @@ color_char(const Color color, const Color_type type, const char c)
     char color_code[25];
 
     sprintf(color_code, COLOR_FORMAT, type, color);
-
     color_str = xmalloc(strlen(color_code) + strlen(COLOR_RESET) + 10);
-
     sprintf(color_str, "%s%c%s", color_code, c, COLOR_RESET);
-
     return color_str;
 }
 
@@ -188,16 +179,12 @@ static void
 ch_flag_short(char *arg, Flag *flags)
 {
     char c;
-
-    while ((c = *arg++) != '\0')
-    {
+    
+    while ((c = *arg++) != '\0') {
         int found = 0;
-        for (size_t i = 0; flags[i].flag != NULL || flags[i].function != NULL; ++i)
-        {
+        for (size_t i = 0; flags[i].flag != NULL || flags[i].function != NULL; ++i) {
             if (flags[i].ch != c)
-            {
                 continue;
-            }
 
             if (flags[i].flag != NULL)
                 *(flags[i].flag) = 1;
@@ -208,9 +195,7 @@ ch_flag_short(char *arg, Flag *flags)
             found = 1;
             break;
         }
-
-        if (!found)
-        {
+        if (!found) {
             xerror("invalid option -- '%c'", c);
             exit(EXIT_FAILURE);
         }
@@ -223,8 +208,7 @@ ch_flag_long(char *arg, Flag *flags)
     size_t i;
     int found = 0;
 
-    for (i = 0; flags[i].flag != NULL || flags[i].function != NULL; ++i)
-    {
+    for (i = 0; flags[i].flag != NULL || flags[i].function != NULL; ++i) {
         if (flags[i].string == NULL || !streq(flags[i].string, arg))
             continue;
 
@@ -252,10 +236,8 @@ get_options(char **args, Flag *flags)
     char **no_flags = args;
     size_t i = 0;
 
-    for (++args; *args; ++args)
-    {
-        if (**args != '-' || *++*args == '\0')
-        {
+    for (++args; *args; ++args) {
+        if (**args != '-' || *++*args == '\0') {
             no_flags[i++] = *args;
             continue;
         }
@@ -275,12 +257,10 @@ count_digits(int num)
 {
     int digits = 0;
 
-    while (num > 0) 
-    {
+    while (num > 0) {
         num /= 10;
         digits++;
     }
-
     return digits;
 }
 
@@ -291,10 +271,16 @@ num_to_str(const int num)
     char *str;
 
     str = xmalloc(count_digits(num) + 1);
-
     sprintf(str, "%d", num);
-
     return str;
+}
+
+void
+author(void) 
+{
+#ifdef AUTHOR
+    fputs("Report bugs to " AUTHOR "\n", stdout);
+#endif
 }
 
 void
@@ -302,24 +288,18 @@ lusage(const char short_opt, const char *long_opt, const char *desc)
 {
     size_t spaces;
 
-    if (short_opt != 0)
-    {
+    if (short_opt != 0) {
         set_color(C_BLUE, CT_LIGHT);
-
         fprintf(stdout, "    -%c", short_opt);
-
         set_color(C_WHITE, CT_LIGHT);
-
         fprintf(stdout, ", ");
     }
     else
         fprintf(stdout, "        ");
 
-    if (long_opt != NULL)
-    {
+    if (long_opt != NULL) {
         set_color(C_GREEN, CT_LIGHT);
         fprintf(stdout, "--%s", long_opt);
- 
         spaces = 16 - strlen(long_opt);
     }
     else
@@ -329,11 +309,8 @@ lusage(const char short_opt, const char *long_opt, const char *desc)
         fputc(' ', stdout);
 
     set_color(C_WHITE, CT_LIGHT);
-
     fprintf(stdout, "%s", desc);
-
     clear_color();
-
     fputc('\n', stdout);
 }
 

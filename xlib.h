@@ -5,28 +5,25 @@
 #include <pwd.h>
 #include <sys/types.h>
 
-struct xpasswd 
-{
+extern char *x_program_name;
+extern char *x_version;
+extern char *x_author;
+
+typedef struct {
     char *name;
     char *home;
     char *shell;
     gid_t gid;
     uid_t uid;
-};
+} Xpasswd;
 
-typedef struct xpasswd Xpasswd;
-
-struct xgroup
-{
+typedef struct{
     char *name;
     char *pass;
     gid_t gid;
-};
+} Xgroup;
 
-typedef struct xgroup Xgroup;
-
-enum color
-{
+typedef enum {
     C_BLACK = 30,
     C_RED, 
     C_GREEN,
@@ -35,63 +32,61 @@ enum color
     C_PURPLE,
     C_CYAN,
     C_WHITE
-};
+} Color;
 
-typedef enum color Color;
 
-enum color_type
-{
+typedef enum {
+    INFO_AUTHOR,
+    INFO_PROGRAM_NAME,
+    INFO_VERSION
+} Info_type;
+
+
+typedef enum {
     CT_LIGHT,
     CT_NORMAL,
     CT_DARK
-};
-
-typedef enum color_type Color_type;
+} Color_type;
 
 typedef void (*Function)(void);
-
 typedef unsigned short int Option;
 
 #define COLOR_SIZE 11
 
-struct flag
-{
+typedef struct {
     char *string;
     char ch;
     Option *flag;
     Function function;
-};
+} Flag;
 
-typedef struct flag Flag;
+extern char **get_options(char ** /* args */, Flag * /* flag */);
 
-extern char **get_options(char **args, Flag *);
+extern void xerror(const char * /* format */, ...);
 
-extern void xerror(const char *, ...);
+extern void *xmalloc(size_t /* size */);
+extern void *xrealloc(void * /* p */, size_t /* size */);
 
-extern void *xmalloc(size_t);
-extern void *xrealloc(void *, size_t );
-extern void xfree(void *);
-
-extern char *dupstr(const char *);
-extern int streq(const char *, const char *);
-extern char *num_to_str(const int);
-extern int count_digits(int);
-extern void free_array(char **, const size_t);
-
-extern char *color_string(const Color, const Color_type, const char *);
-extern char *color_num(const Color, const Color_type, const int);
-extern char *color_char(const Color , const Color_type , const char );
-extern void set_color(const Color , const Color_type );
+extern char *dupstr(const char * /* string */);
+extern int streq(const char * /* str1 */, const char * /* str2 */);
+extern char *num_to_str(const int /* number */);
+extern int count_digits(int /* number */);
+extern void free_array(char ** /* array */, const size_t /* size */);
+extern char *color_string(const Color /* color */, const Color_type /* type */, const char * /* string */);
+extern char *color_num(const Color /* color */, const Color_type /* type */, const int /* number */);
+extern char *color_char(const Color /* color */, const Color_type /* type */, const char /* character */);
+extern void set_color(const Color /* color */, const Color_type /* type */);
 extern void clear_color(void);
 
-extern Xpasswd *get_passwd(uid_t);
-extern Xgroup *get_group(gid_t );
+extern Xpasswd *get_passwd(uid_t /* uid */);
+extern Xgroup *get_group(gid_t /* gid */);
 
-extern void xversion(void);
-extern void lusage(const char, const char *, const char *);
+extern void xversion(const char * /* program_name */, const char * /* version */, const char * /* copyright */, const char * /* description */);
+extern void lusage(const char /* short_flag */, const char * /* long_flag */, const char * /* message */);
+extern void author(void);
 
-extern void free_group(Xgroup *);
-extern void free_passwd(Xpasswd *);
+extern void free_group(Xgroup * /* group */);
+extern void free_passwd(Xpasswd * /* pwd */);
 
 #endif /* XUTILS_LIB_H */
 

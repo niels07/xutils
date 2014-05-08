@@ -6,18 +6,19 @@
 #include "xlib.h"
 
 #define PROGRAM_NAME "pwd"
-#define VERSION 1.0
+#define VERSION 1.1
+#define AUTHOR "niels@n-ve.be"
 
 /* Get current working directory from the 
    PWD environment variable. */
 static Option f_logical = 0;
 
+/* Avoid symlinks if this flag is set. */
 static Option f_physical = 0;
 
 static void usage(void);
 
-static Flag flags[] = 
-{
+static Flag flags[] = {
     { "logical",  'L', &f_logical,  NULL  },
     { "physical", 'P', &f_physical, NULL  },
     { "help",     ' ', NULL,        usage },
@@ -30,14 +31,11 @@ static int
 get_cwd_logical(void)
 {
     cwd = getenv("PWD");
-    
-    if (cwd == NULL)
-    {
-        xerror("Failed to get PWD");
-        return EXIT_FAILURE;
+    if (cwd == NULL) {
+        xerror("failed to get 'PWD'");
+        return 0;
     }
-    
-    return EXIT_SUCCESS;
+    return 1;
 }
 
 static void 
@@ -68,7 +66,7 @@ usage(void)
     fputs("  1  minor problems (e.g., cannot access subdirectory), \n", stdout);
     fputs("  2  serious trouble (e.g., cannot access command-line argument).\n", stdout);
     fputc('\n', stdout);
-    fputs("Report bugs to niels07@live.com\n", stdout);
+    author();
 
     clear_color();
     exit(EXIT_SUCCESS);
@@ -83,21 +81,15 @@ print_cwd(void)
     len = strlen(cwd);
     set_color(C_WHITE, CT_LIGHT); 
 
-    for (i = 0; i < len; ++i)
-    {
+    for (i = 0; i < len; ++i) {
         c = cwd[i];
-
         if (c == '/')
             set_color(C_RED, CT_NORMAL);
-        
         fputc(c, stdout);
-
         if (c == '/')
             set_color(C_WHITE, CT_LIGHT); 
     }
-
     clear_color();
-
     fputc('\n', stdout);
 }
 
@@ -105,39 +97,33 @@ static int
 get_cwd(void)
 {
     cwd = xmalloc(1024);
-    if (getcwd(cwd, sizeof(cwd)) == NULL)
-    {
-        xerror("Failed to get current directory");
+    if (getcwd(cwd, 1024) == NULL) {
+        xerror("failed to get current directory");
         return 0;
     }
-
     return 1;
 }
 
-int pwd(char **args)
+int 
+pwd(char **args)
 {
     int rval = 0;
 
     args = get_options(args, flags);
-
-    if (*args != NULL)
-    {
+    if (*args != NULL) {
         xerror("too many arguments");
         return EXIT_FAILURE;
     }
-
-    if (f_logical)
-        rval = get_cwd_logical();
-    else
-        rval = get_cwd();
-
-    if (rval)
+    rval = f_logical ? get_cwd_logical() : get_cwd();
+    if (rval) {
         print_cwd();
-
-    return rval;
+        return EXIT_SUCCESS;
+    }
+    return EXIT_FAILURE;
 }
 
-int main(int argc, char *argv[]) 
+int 
+main(int argc, char *argv[]) 
 {
     return pwd(argv);
 } 
